@@ -1,0 +1,316 @@
+<head>
+  <style>
+    body { margin: 0; }
+
+    #time {
+      position: absolute;
+      bottom: 8px;
+      left: 8px;
+      color: lightblue;
+      font-family: monospace;
+      font-size: 18px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 8px;
+      border-radius: 4px;
+    }
+
+    #controls {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      font-family: Arial, sans-serif;
+      min-width: 250px;
+    }
+
+    #controls h3 {
+      margin: 0 0 10px 0;
+      font-size: 16px;
+    }
+
+    #controls label {
+      display: block;
+      margin: 8px 0 4px 0;
+      font-size: 12px;
+    }
+
+    #controls input[type="range"] {
+      width: 100%;
+      margin: 4px 0;
+    }
+
+    #controls input[type="number"] {
+      width: 60px;
+      padding: 4px;
+      margin-left: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      border-radius: 4px;
+    }
+
+    #controls button {
+      padding: 6px 12px;
+      margin: 8px 4px 0 0;
+      background: rgba(100, 150, 255, 0.8);
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+    }
+
+    #controls button:hover {
+      background: rgba(100, 150, 255, 1);
+    }
+
+    #controls button:active {
+      background: rgba(80, 120, 220, 1);
+    }
+
+    .control-row {
+      display: flex;
+      align-items: center;
+      margin: 8px 0;
+    }
+
+    #info {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      background: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 10px;
+      border-radius: 4px;
+      font-family: Arial, sans-serif;
+      font-size: 11px;
+      max-width: 250px;
+    }
+  </style>
+
+  <script src="../../dist/webgl-globe.js"></script>
+</head>
+
+<body>
+  <div id="globeViz"></div>
+  
+  <div id="controls">
+    <h3>Time Control</h3>
+    <div class="control-row">
+      <label for="timeSlider">Time of Day:</label>
+      <input type="range" id="timeSlider" min="0" max="23" value="12" step="0.1">
+      <input type="number" id="timeValue" min="0" max="23" value="12" step="0.1">
+    </div>
+    <div class="control-row">
+      <button id="playPause">Play</button>
+      <button id="reset">Reset to Now</button>
+    </div>
+    <label>
+      <input type="checkbox" id="autoAnimate" checked>
+      Auto-animate
+    </label>
+  </div>
+
+  <div id="time"></div>
+  
+  <div id="info">
+    <strong>Country Polygons API Demo</strong><br>
+    This example demonstrates:<br>
+    • Day/night cycle with UI controls<br>
+    • Country polygon visualization<br>
+    • Support for multiple polygons<br>
+    • Customizable polygon colors
+  </div>
+
+  <script>
+    const VELOCITY = 1; // minutes per frame
+
+    let dt = +new Date();
+    let isAnimating = false;
+    const timeEl = document.getElementById('time');
+    const timeSlider = document.getElementById('timeSlider');
+    const timeValue = document.getElementById('timeValue');
+    const playPauseBtn = document.getElementById('playPause');
+    const resetBtn = document.getElementById('reset');
+    const autoAnimateCheckbox = document.getElementById('autoAnimate');
+
+    const world = new Globe(document.getElementById('globeViz'))
+      .globeImageUrl('//unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+      .backgroundImageUrl('//unpkg.com/three-globe/example/img/night-sky.png');
+
+    // API function to load country polygons
+    // Supports multiple polygons per country and holes
+    function loadCountryPolygons(polygonData) {
+      // polygonData should be an array of objects with:
+      // - geometry: GeoJSON geometry (Polygon or MultiPolygon)
+      // - fillColor: color for the polygon fill
+      // - strokeColor: color for the polygon edge
+      // - name: optional country name
+      // - altitude: optional altitude (default 0.01)
+      
+      const processedData = polygonData.map(country => ({
+        ...country,
+        fillColor: country.fillColor || '#ffffaa',
+        strokeColor: country.strokeColor || '#111111',
+        altitude: country.altitude || 0.01
+      }));
+
+      world
+        .polygonsData(processedData)
+        .polygonGeoJsonGeometry(d => d.geometry)
+        .polygonCapColor(d => d.fillColor)
+        .polygonSideColor(d => d.fillColor)
+        .polygonStrokeColor(d => d.strokeColor)
+        .polygonAltitude(d => d.altitude)
+        .polygonLabel(d => d.name || '');
+      
+      return world;
+    }
+
+    // Expose API globally
+    window.GlobeAPI = {
+      loadCountryPolygons: loadCountryPolygons,
+      setTime: (timeInHours) => {
+        const now = new Date();
+        now.setHours(timeInHours);
+        now.setMinutes((timeInHours % 1) * 60);
+        dt = +now;
+        updateTimeDisplay();
+      },
+      getGlobe: () => world
+    };
+
+    function updateTimeDisplay() {
+      const currentDate = new Date(dt);
+      timeEl.textContent = currentDate.toLocaleString();
+      const hours = currentDate.getHours() + currentDate.getMinutes() / 60;
+      timeSlider.value = hours;
+      timeValue.value = hours.toFixed(1);
+    }
+
+    function setTimeFromSlider(hours) {
+      const now = new Date();
+      now.setHours(Math.floor(hours));
+      now.setMinutes((hours % 1) * 60);
+      now.setSeconds(0);
+      dt = +now;
+      updateTimeDisplay();
+    }
+
+    timeSlider.addEventListener('input', (e) => {
+      setTimeFromSlider(parseFloat(e.target.value));
+    });
+
+    timeValue.addEventListener('input', (e) => {
+      const value = parseFloat(e.target.value);
+      if (value >= 0 && value <= 23) {
+        setTimeFromSlider(value);
+      }
+    });
+
+    playPauseBtn.addEventListener('click', () => {
+      isAnimating = !isAnimating;
+      playPauseBtn.textContent = isAnimating ? 'Pause' : 'Play';
+      if (isAnimating && !autoAnimateCheckbox.checked) {
+        autoAnimateCheckbox.checked = true;
+      }
+    });
+
+    resetBtn.addEventListener('click', () => {
+      dt = +new Date();
+      updateTimeDisplay();
+    });
+
+    autoAnimateCheckbox.addEventListener('change', (e) => {
+      if (!e.target.checked) {
+        isAnimating = false;
+        playPauseBtn.textContent = 'Play';
+      } else {
+        isAnimating = true;
+        playPauseBtn.textContent = 'Pause';
+      }
+    });
+
+    // Example: Create some sample country polygons
+    // These are simplified polygon examples demonstrating the API
+    const samplePolygons = [
+      // Example 1: Simple polygon (square)
+      {
+        name: 'Sample Country 1',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[
+            [-10, 30], [10, 30], [10, 50], [-10, 50], [-10, 30]
+          ]]
+        },
+        fillColor: '#ff6b6b',
+        strokeColor: '#333333',
+        altitude: 0.015
+      },
+      // Example 2: Polygon with a hole
+      {
+        name: 'Sample Country 2 (with hole)',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [
+            // Outer ring
+            [[20, 30], [40, 30], [40, 50], [20, 50], [20, 30]],
+            // Inner hole
+            [[25, 35], [35, 35], [35, 45], [25, 45], [25, 35]]
+          ]
+        },
+        fillColor: '#4ecdc4',
+        strokeColor: '#333333',
+        altitude: 0.015
+      },
+      // Example 3: MultiPolygon (multiple separate polygons)
+      {
+        name: 'Sample Country 3 (multi-polygon)',
+        geometry: {
+          type: 'MultiPolygon',
+          coordinates: [
+            // First polygon
+            [[[50, 30], [60, 30], [60, 40], [50, 40], [50, 30]]],
+            // Second polygon
+            [[[65, 35], [75, 35], [75, 45], [65, 45], [65, 35]]]
+          ]
+        },
+        fillColor: '#95e1d3',
+        strokeColor: '#333333',
+        altitude: 0.015
+      },
+      // Example 4: Another simple polygon
+      {
+        name: 'Sample Country 4',
+        geometry: {
+          type: 'Polygon',
+          coordinates: [[
+            [-40, -10], [-20, -10], [-20, 10], [-40, 10], [-40, -10]
+          ]]
+        },
+        fillColor: '#f38181',
+        strokeColor: '#333333',
+        altitude: 0.015
+      }
+    ];
+
+    // Load the sample polygons
+    loadCountryPolygons(samplePolygons);
+
+    // Initialize display
+    updateTimeDisplay();
+    isAnimating = autoAnimateCheckbox.checked;
+
+    // Animation loop
+    (function animate() {
+      if (isAnimating) {
+        dt += VELOCITY * 60 * 1000;
+        updateTimeDisplay();
+      }
+      requestAnimationFrame(animate);
+    })();
+  </script>
+</body>
