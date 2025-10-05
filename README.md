@@ -1,82 +1,94 @@
 # WebGL-Globe
-Based on a fork of globe.gl.
+Based on a fork of [globe.gl](https://github.com/vasturiano/globe.gl).
 
 ## Features
 
 This fork adds enhanced support for country polygon visualization with:
-- Day/night cycle visualization with UI controls
-- API for loading country polygons with customizable colors
-- Support for multiple polygons per country
-- Support for polygon holes (interior rings)
-- Interactive time-of-day controls
+- 🌍 Day/night cycle visualization with interactive UI controls
+- 🗺️ API for loading country polygons with customizable colors
+- 🔷 Support for multiple polygons per country (MultiPolygon)
+- ⭕ Support for polygon holes (interior rings)
+- ⏰ Interactive time-of-day controls with play/pause and slider
+- 🎨 Customizable fill and stroke colors per polygon
+
+## Quick Start
+
+### Installation
+
+```bash
+npm install
+npm run build
+```
+
+### Running the Example
+
+1. Start a local HTTP server:
+```bash
+npm run dev
+```
+
+Or use Python:
+```bash
+python3 -m http.server 8080
+```
+
+2. Open your browser to:
+```
+http://localhost:8080/example/country-polygons-day-night/index.html
+```
 
 ## Example
 
-See the [Country Polygons with Day/Night Cycle](example/country-polygons-day-night/index.html) example for a demonstration.
+See the [Country Polygons with Day/Night Cycle](example/country-polygons-day-night/index.html) example for a full demonstration.
 
-## API
+![Example Screenshot](https://github.com/user-attachments/assets/03b26377-5e26-472f-b3da-178619798cc3)
 
-### loadCountryPolygons(polygonData)
+## API Documentation
 
-Loads country polygon data onto the globe with customizable colors.
+For detailed API documentation, see [API.md](API.md).
 
-**Parameters:**
-- `polygonData` (Array): Array of objects, each representing a country or region with the following properties:
-  - `geometry` (Object): GeoJSON geometry object (Polygon or MultiPolygon)
-  - `fillColor` (String, optional): Color for the polygon fill (default: '#ffffaa')
-  - `strokeColor` (String, optional): Color for the polygon edge (default: '#111111')
-  - `altitude` (Number, optional): Altitude of the polygon (default: 0.01)
-  - `name` (String, optional): Name of the country/region
+### Quick API Overview
 
-**Returns:** The Globe instance for method chaining
+#### Load Country Polygons
 
-**Example:**
 ```javascript
 const polygons = [
   {
+    name: 'Country Name',
     geometry: { type: "Polygon", coordinates: [[...]] },
     fillColor: '#ff6b6b',
     strokeColor: '#333333',
-    altitude: 0.01,
-    name: 'Country Name'
+    altitude: 0.01
   }
 ];
 
 window.GlobeAPI.loadCountryPolygons(polygons);
 ```
 
-### setTime(timeInHours)
+#### Set Time of Day
 
-Sets the time of day for the day/night cycle.
-
-**Parameters:**
-- `timeInHours` (Number): Time in 24-hour format (0-23, supports decimals)
-
-**Example:**
 ```javascript
 window.GlobeAPI.setTime(14.5); // Set to 2:30 PM
 ```
 
-### getGlobe()
+#### Get Globe Instance
 
-Returns the underlying Globe instance for advanced customization.
-
-**Returns:** Globe instance
-
-**Example:**
 ```javascript
 const globe = window.GlobeAPI.getGlobe();
 // Use any globe.gl API methods
 ```
 
-## Multi-Polygon Support
+## Polygon Types Supported
 
-The API supports both simple Polygons and MultiPolygons:
+### Simple Polygon
+```javascript
+{
+  type: "Polygon",
+  coordinates: [[[outer ring coordinates]]]
+}
+```
 
-- **Polygon**: A single polygon with optional holes
-- **MultiPolygon**: Multiple polygons (useful for countries with non-contiguous territories)
-
-**Polygon with holes example:**
+### Polygon with Holes
 ```javascript
 {
   type: "Polygon",
@@ -88,7 +100,7 @@ The API supports both simple Polygons and MultiPolygons:
 }
 ```
 
-**MultiPolygon example:**
+### MultiPolygon (Multiple Regions)
 ```javascript
 {
   type: "MultiPolygon",
@@ -99,21 +111,92 @@ The API supports both simple Polygons and MultiPolygons:
 }
 ```
 
-## Installation
+## Development
 
+### Build the library
 ```bash
-npm install
 npm run build
 ```
 
-## Development
-
+### Development mode with auto-rebuild
 ```bash
 npm run dev
 ```
 
-Then open `example/country-polygons-day-night/index.html` in your browser.
+### Project Structure
+```
+WebGL-Globe/
+├── src/              # Source files from globe.gl
+├── dist/             # Built library files
+├── example/          # Example implementations
+│   └── country-polygons-day-night/
+│       └── index.html
+├── API.md            # Detailed API documentation
+└── README.md         # This file
+```
+
+## Features in Detail
+
+### Time Control UI
+- **Slider**: Drag to set time of day (0-23 hours)
+- **Numeric Input**: Type exact time value
+- **Play/Pause**: Start/stop automatic time progression
+- **Reset to Now**: Jump to current system time
+- **Auto-animate**: Toggle automatic time advancement
+
+### Country Polygon API
+The `loadCountryPolygons()` function accepts an array of polygon objects with:
+- **geometry**: GeoJSON Polygon or MultiPolygon
+- **fillColor**: Interior color (supports any CSS color format)
+- **strokeColor**: Border/edge color
+- **altitude**: Height above globe surface (0.01 = standard)
+- **name**: Optional label for the polygon
+
+### Multi-Polygon Support
+Perfect for countries with:
+- Non-contiguous territories (e.g., islands)
+- Enclaves or exclaves
+- Complex geographical boundaries
+
+### Hole Support
+Inner rings create holes in polygons, useful for:
+- Lakes within countries
+- Enclaves of other territories
+- Complex coastal features
+
+## Real-World Usage
+
+Load actual country boundaries from GeoJSON:
+
+```javascript
+fetch('https://unpkg.com/world-atlas/countries-110m.json')
+  .then(res => res.json())
+  .then(data => {
+    const countries = data.objects.countries.features.map(feature => ({
+      name: feature.properties.name,
+      geometry: feature.geometry,
+      fillColor: `hsl(${Math.random() * 360}, 70%, 50%)`,
+      strokeColor: '#333333',
+      altitude: 0.01
+    }));
+    
+    window.GlobeAPI.loadCountryPolygons(countries);
+  });
+```
+
+## Browser Support
+
+Requires a browser with WebGL support:
+- Chrome 56+
+- Firefox 52+
+- Safari 11+
+- Edge 79+
+
+## Credits
+
+Based on [globe.gl](https://github.com/vasturiano/globe.gl) by [Vasco Asturiano](https://github.com/vasturiano).
 
 ## License
 
 MIT
+
